@@ -2,8 +2,10 @@ package net.ruippeixotog.joyful.lib
 
 import scala.util.Random
 
-import net.ruippeixotog.joyful.Value.Conversions._
-import net.ruippeixotog.joyful._
+import net.ruippeixotog.joyful.interpreter.Interpreter.ScopedTerm
+import net.ruippeixotog.joyful.interpreter.Value._
+import net.ruippeixotog.joyful.interpreter.{Interpreter, Value}
+import net.ruippeixotog.joyful.lang.Parser
 
 // http://www.kevinalbrecht.com/code/joy-mirror/html-manual.html
 object Primitives extends LibBuilder {
@@ -37,100 +39,100 @@ object Primitives extends LibBuilder {
   primS("rotated") { case w :: z :: y :: x :: rest => w :: x :: y :: z :: rest }
   primS("pop") { case _ :: rest => rest }
   primS("choice") {
-    case _ :: t :: BoolVal(true) :: rest => t :: rest
-    case f :: _ :: BoolVal(false) :: rest => f :: rest
+    case _ :: t :: VBool(true) :: rest => t :: rest
+    case f :: _ :: VBool(false) :: rest => f :: rest
   }
   primS("or") {
-    case BoolVal(b2) :: BoolVal(b1) :: rest => (b2 || b1) :: rest
-    case SetVal(s2) :: SetVal(s1) :: rest => (s2 ++ s1) :: rest
+    case VBool(b2) :: VBool(b1) :: rest => (b2 || b1) :: rest
+    case VSet(s2) :: VSet(s1) :: rest => (s2 ++ s1) :: rest
   }
   primS("xor") {
-    case BoolVal(b2) :: BoolVal(b1) :: rest => (b2 ^ b1) :: rest
-    case SetVal(s2) :: SetVal(s1) :: rest => (s2 ++ s1 -- s2.intersect(s1)) :: rest
+    case VBool(b2) :: VBool(b1) :: rest => (b2 ^ b1) :: rest
+    case VSet(s2) :: VSet(s1) :: rest => (s2 ++ s1 -- s2.intersect(s1)) :: rest
   }
   primS("and") {
-    case BoolVal(b2) :: BoolVal(b1) :: rest => (b2 && b1) :: rest
-    case SetVal(s2) :: SetVal(s1) :: rest => s2.intersect(s1) :: rest
+    case VBool(b2) :: VBool(b1) :: rest => (b2 && b1) :: rest
+    case VSet(s2) :: VSet(s1) :: rest => s2.intersect(s1) :: rest
   }
   primS("not") {
-    case BoolVal(b) :: rest => !b :: rest
-    case SetVal(s) :: rest => ((0 until 65536).toSet -- s) :: rest
+    case VBool(b) :: rest => !b :: rest
+    case VSet(s) :: rest => ((0 until 65536).toSet -- s) :: rest
   }
   primS("+") {
-    case IntVal(b) :: IntVal(a) :: rest => (a + b) :: rest
-    case FloatVal(b) :: FloatVal(a) :: rest => (a + b) :: rest
+    case VInt(b) :: VInt(a) :: rest => (a + b) :: rest
+    case VFloat(b) :: VFloat(a) :: rest => (a + b) :: rest
   }
   primS("-") {
-    case IntVal(b) :: IntVal(a) :: rest => (a - b) :: rest
-    case FloatVal(b) :: FloatVal(a) :: rest => (a - b) :: rest
+    case VInt(b) :: VInt(a) :: rest => (a - b) :: rest
+    case VFloat(b) :: VFloat(a) :: rest => (a - b) :: rest
   }
   primS("*") {
-    case IntVal(b) :: IntVal(a) :: rest => (a * b) :: rest
-    case FloatVal(b) :: FloatVal(a) :: rest => (a * b) :: rest
+    case VInt(b) :: VInt(a) :: rest => (a * b) :: rest
+    case VFloat(b) :: VFloat(a) :: rest => (a * b) :: rest
   }
   primS("/") {
-    case IntVal(b) :: IntVal(a) :: rest => (a / b) :: rest
-    case FloatVal(b) :: FloatVal(a) :: rest => (a / b) :: rest
+    case VInt(b) :: VInt(a) :: rest => (a / b) :: rest
+    case VFloat(b) :: VFloat(a) :: rest => (a / b) :: rest
   }
   primS("rem") {
-    case IntVal(b) :: IntVal(a) :: rest => (a % b) :: rest
-    case FloatVal(b) :: FloatVal(a) :: rest => (a % b) :: rest
+    case VInt(b) :: VInt(a) :: rest => (a % b) :: rest
+    case VFloat(b) :: VFloat(a) :: rest => (a % b) :: rest
   }
-  primS("div") { case IntVal(b) :: IntVal(a) :: rest => (a % b) :: IntVal(a / b) :: rest }
+  primS("div") { case VInt(b) :: VInt(a) :: rest => (a % b) :: VInt(a / b) :: rest }
   primS("sign") {
-    case IntVal(a) :: rest => a.signum :: rest
-    case FloatVal(a) :: rest => a.signum.toDouble :: rest
+    case VInt(a) :: rest => a.signum :: rest
+    case VFloat(a) :: rest => a.signum.toDouble :: rest
   }
   primS("neg") {
-    case IntVal(a) :: rest => -a :: rest
-    case FloatVal(a) :: rest => -a :: rest
+    case VInt(a) :: rest => -a :: rest
+    case VFloat(a) :: rest => -a :: rest
   }
   primS("ord") {
-    case CharVal(c) :: rest => c.toInt :: rest
-    case BoolVal(b) :: rest => (if(b) 1 else 0) :: rest
-    case IntVal(n) :: rest => n :: rest
+    case VChar(c) :: rest => c.toInt :: rest
+    case VBool(b) :: rest => (if(b) 1 else 0) :: rest
+    case VInt(n) :: rest => n :: rest
   }
   primS("chr") {
-    case IntVal(n) :: rest => n.toChar :: rest
-    case BoolVal(b) :: rest => (if(b) 1 else 0).toChar :: rest
-    case CharVal(c) :: rest => c :: rest
+    case VInt(n) :: rest => n.toChar :: rest
+    case VBool(b) :: rest => (if(b) 1 else 0).toChar :: rest
+    case VChar(c) :: rest => c :: rest
   }
   primS("abs") {
-    case IntVal(a) :: rest => math.abs(a) :: rest
-    case FloatVal(a) :: rest => math.abs(a) :: rest
+    case VInt(a) :: rest => math.abs(a) :: rest
+    case VFloat(a) :: rest => math.abs(a) :: rest
   }
-  primS("acos") { case FloatVal(a) :: rest => math.acos(a) :: rest }
-  primS("asin") { case FloatVal(a) :: rest => math.asin(a) :: rest }
-  primS("atan") { case FloatVal(a) :: rest => math.atan(a) :: rest }
-  primS("atan2") { case FloatVal(b) :: FloatVal(a) :: rest => math.atan2(a, b) :: rest }
-  primS("ceil") { case FloatVal(a) :: rest => math.ceil(a) :: rest }
-  primS("cos") { case FloatVal(a) :: rest => math.cos(a) :: rest }
-  primS("cosh") { case FloatVal(a) :: rest => math.cosh(a) :: rest }
-  primS("exp") { case FloatVal(a) :: rest => math.exp(a) :: rest }
-  primS("floor") { case FloatVal(a) :: rest => math.floor(a) :: rest }
+  primS("acos") { case VFloat(a) :: rest => math.acos(a) :: rest }
+  primS("asin") { case VFloat(a) :: rest => math.asin(a) :: rest }
+  primS("atan") { case VFloat(a) :: rest => math.atan(a) :: rest }
+  primS("atan2") { case VFloat(b) :: VFloat(a) :: rest => math.atan2(a, b) :: rest }
+  primS("ceil") { case VFloat(a) :: rest => math.ceil(a) :: rest }
+  primS("cos") { case VFloat(a) :: rest => math.cos(a) :: rest }
+  primS("cosh") { case VFloat(a) :: rest => math.cosh(a) :: rest }
+  primS("exp") { case VFloat(a) :: rest => math.exp(a) :: rest }
+  primS("floor") { case VFloat(a) :: rest => math.floor(a) :: rest }
   primTodo("frexp")
-  primS("ldexp") { case IntVal(b) :: FloatVal(a) :: rest => (a * math.pow(2, b)) :: rest }
-  primS("log") { case FloatVal(a) :: rest => math.log(a) :: rest }
-  primS("log10") { case FloatVal(a) :: rest => math.log10(a) :: rest }
+  primS("ldexp") { case VInt(b) :: VFloat(a) :: rest => (a * math.pow(2, b)) :: rest }
+  primS("log") { case VFloat(a) :: rest => math.log(a) :: rest }
+  primS("log10") { case VFloat(a) :: rest => math.log10(a) :: rest }
   primTodo("modf")
-  primS("pow") { case FloatVal(b) :: FloatVal(a) :: rest => math.pow(a, b) :: rest }
-  primS("sin") { case FloatVal(a) :: rest => math.sin(a) :: rest }
-  primS("sinh") { case FloatVal(a) :: rest => math.sinh(a) :: rest }
-  primS("sqrt") { case FloatVal(a) :: rest => math.sqrt(a) :: rest }
-  primS("tan") { case FloatVal(a) :: rest => math.tan(a) :: rest }
-  primS("tanh") { case FloatVal(a) :: rest => math.tanh(a) :: rest }
+  primS("pow") { case VFloat(b) :: VFloat(a) :: rest => math.pow(a, b) :: rest }
+  primS("sin") { case VFloat(a) :: rest => math.sin(a) :: rest }
+  primS("sinh") { case VFloat(a) :: rest => math.sinh(a) :: rest }
+  primS("sqrt") { case VFloat(a) :: rest => math.sqrt(a) :: rest }
+  primS("tan") { case VFloat(a) :: rest => math.tan(a) :: rest }
+  primS("tanh") { case VFloat(a) :: rest => math.tanh(a) :: rest }
   primTodo("trunc")
   primTodo("localtime")
   primTodo("gmtime")
   primTodo("mktime")
   primTodo("strftime")
-  primS("strtol") { case IntVal(rdx) :: StrVal(str) :: rest => Integer.parseInt(str, rdx.toInt) :: rest }
-  primS("strtod") { case StrVal(str) :: rest => str.toDouble :: rest }
+  primS("strtol") { case VInt(rdx) :: VStr(str) :: rest => java.lang.Integer.parseInt(str, rdx.toInt) :: rest }
+  primS("strtod") { case VStr(str) :: rest => str.toDouble :: rest }
   primTodo("format")
   primTodo("formatf")
-  primTodo("srand")
-  primTodo("pred")
-  primTodo("succ")
+  primS("srand") { case VInt(n) :: rest => Random.setSeed(n); rest }
+  primS("pred") { case VInt(n) :: rest => VInt(n - 1) :: rest }
+  primS("succ") { case VInt(n) :: rest => VInt(n + 1) :: rest }
   primTodo("max")
   primTodo("min")
   primTodo("fclose")
@@ -151,49 +153,132 @@ object Primitives extends LibBuilder {
   primTodo("fseek")
   primTodo("ftell")
   primTodo("unstack")
-  primTodo("cons")
-  primTodo("swons")
-  primTodo("first")
-  primTodo("rest")
+  primS("cons") {
+    case VList(xs) :: x :: rest => VList(x :: xs) :: rest
+    case VStr(str) :: VChar(ch) :: rest => VStr(ch +: str) :: rest
+  }
+  primS("swons") {
+    case x :: VList(xs) :: rest => VList(x :: xs) :: rest
+    case VChar(ch) :: VStr(str) :: rest => VStr(ch +: str) :: rest
+  }
+  primS("first") {
+    case VList(xs) :: rest => xs.head :: rest
+    case VStr(str) :: rest => VChar(str.head) :: rest
+  }
+  primS("rest") {
+    case VList(xs) :: rest => VList(xs.tail) :: rest
+    case VStr(str) :: rest => VStr(str.tail) :: rest
+  }
   primTodo("compare")
   primTodo("at")
   primTodo("of")
-  primTodo("size")
+  primS("size") {
+    case VList(xs) :: rest => VInt(xs.length) :: rest
+    case VStr(str) :: rest => VInt(str.length) :: rest
+  }
   primTodo("opcase")
   primTodo("case")
-  primTodo("uncons")
-  primTodo("unswons")
+  primS("uncons") {
+    case VList(x :: xs) :: rest => VList(xs) :: x :: rest
+    case VStr(str) :: rest => VStr(str.tail) :: VChar(str.head) :: rest
+  }
+  primS("unswons") {
+    case VList(x :: xs) :: rest => x :: VList(xs) :: rest
+    case VStr(str) :: rest => VChar(str.head) :: VStr(str.tail) :: rest
+  }
   primTodo("drop")
   primTodo("take")
-  primTodo("concat")
+  primS("concat") {
+    case VList(ys) :: VList(xs) :: rest => VList(xs ++ ys) :: rest
+    case VStr(str2) :: VStr(str1) :: rest => VStr(str1 ++ str2) :: rest
+  }
   primTodo("enconcat")
   primTodo("name")
-  primTodo("intern")
-  primTodo("body")
-  primTodo("null")
+  primS("intern") { case VStr(str) :: rest => VIdent(str) :: rest }
+  prim("body") { st =>
+    st.stack match {
+      case VIdent(name) :: rest =>
+        val nameTerm = st.termStack.head._2.get(name) match {
+          case Some(ScopedTerm(dfn, _)) => Value.fromTerm(dfn)
+          case _ => Nil
+        }
+        st.copy(stack = VList(nameTerm) :: rest)
+    }
+  }
+  primS("null") {
+    case VList(xs) :: rest => VBool(xs.isEmpty) :: rest
+    case VStr(str) :: rest => VBool(str.isEmpty) :: rest
+    case VInt(n) :: rest => VBool(n == 0) :: rest
+    case VFloat(x) :: rest => VBool(x == 0.0) :: rest
+  }
   primTodo("small")
   primTodo(">=")
-  primTodo(">")
+  primS(">") {
+    case VInt(b) :: VInt(a) :: rest => (a > b) :: rest
+    case VFloat(b) :: VFloat(a) :: rest => (a > b) :: rest
+    case VInt(b) :: VFloat(a) :: rest => (a > b) :: rest
+    case VFloat(b) :: VInt(a) :: rest => (a > b) :: rest
+    case VStr(str2) :: VStr(str1) :: rest => (str2 > str1) :: rest
+    case VIdent(name2) :: VIdent(name1) :: rest => (name1 > name2) :: rest
+  }
   primTodo("<=")
-  primTodo("<")
+  primS("<") {
+    case VInt(b) :: VInt(a) :: rest => (a < b) :: rest
+    case VFloat(b) :: VFloat(a) :: rest => (a < b) :: rest
+    case VInt(b) :: VFloat(a) :: rest => (a < b) :: rest
+    case VFloat(b) :: VInt(a) :: rest => (a < b) :: rest
+    case VStr(str2) :: VStr(str1) :: rest => (str2 < str1) :: rest
+    case VIdent(name2) :: VIdent(name1) :: rest => (name1 < name2) :: rest
+  }
   primTodo("!=")
-  primTodo("=")
+  primS("=") {
+    case VInt(b) :: VInt(a) :: rest => (a == b) :: rest
+    case VFloat(b) :: VFloat(a) :: rest => (a == b) :: rest
+    case VInt(b) :: VFloat(a) :: rest => (a == b) :: rest
+    case VFloat(b) :: VInt(a) :: rest => (a == b) :: rest
+    case VStr(str2) :: VStr(str1) :: rest => (str2 == str1) :: rest
+    case VIdent(name2) :: VIdent(name1) :: rest => (name1 == name2) :: rest
+  }
   primTodo("equal")
-  primTodo("has")
-  primTodo("in")
+  primS("has") {
+    case x :: VList(xs) :: rest => VBool(xs.contains(x)) :: rest
+    case VChar(ch) :: VStr(str) :: rest => VBool(str.contains(ch)) :: rest
+  }
+  primS("in") {
+    case VList(xs) :: x :: rest => VBool(xs.contains(x)) :: rest
+    case VStr(str) :: VChar(ch) :: rest => VBool(str.contains(ch)) :: rest
+  }
   primTodo("integer")
   primTodo("char")
   primTodo("logical")
   primTodo("set")
   primTodo("string")
-  primTodo("list")
+  primS("list") {
+    case (_: VList) :: rest => VBool(true) :: rest
+    case _ :: rest => VBool(false) :: rest
+  }
   primTodo("leaf")
   primTodo("user")
   primTodo("float")
   primTodo("file")
-  primTodo("i")
-  primTodo("x")
-  primTodo("dip")
+
+  prim("i") { st =>
+    st.stack match {
+      case VList(values) :: rest => st.copy(stack = rest, termStack = (values, st.termStack.head._2) :: st.termStack)
+    }
+  }
+  prim("x") { st =>
+    st.stack match {
+      case VList(values) :: _ => st.copy(termStack = (values, st.termStack.head._2) :: st.termStack)
+    }
+  }
+  prim("dip") { st =>
+    st.stack match {
+      case VList(values) :: x :: rest =>
+        val resStack = Interpreter.runState(st.copy(stack = rest, termStack = (values, st.termStack.head._2) :: Nil)).stack
+        st.copy(stack = x :: resStack)
+    }
+  }
   primTodo("app1")
   primTodo("app11")
   primTodo("app12")
@@ -209,8 +294,24 @@ object Primitives extends LibBuilder {
   primTodo("binary")
   primTodo("ternary")
   primTodo("cleave")
-  primTodo("branch")
-  primTodo("ifte")
+  prim("branch") { st =>
+    val (toExec, newStack) = st.stack match {
+      case VList(fvs) :: _ :: VBool(false) :: rest => (fvs, rest)
+      case _ :: VList(tvs) :: VBool(true) :: rest => (tvs, rest)
+    }
+    st.copy(stack = newStack, termStack = (toExec, st.termStack.head._2) :: st.termStack)
+  }
+  prim("ifte") { st =>
+    st.stack match {
+      case VList(fvs) :: VList(tvs) :: VList(cond) :: rest =>
+        val condStack = Interpreter.runState(st.copy(stack = rest, termStack = (cond, st.termStack.head._2) :: Nil)).stack
+        val toExec = condStack match {
+          case VBool(false) :: _ => fvs
+          case VBool(true) :: _ => tvs
+        }
+        st.copy(stack = rest, termStack = (toExec, st.termStack.head._2) :: st.termStack)
+    }
+  }
   primTodo("ifinteger")
   primTodo("ifchar")
   primTodo("iflogical")
@@ -219,7 +320,20 @@ object Primitives extends LibBuilder {
   primTodo("iflist")
   primTodo("iffloat")
   primTodo("iffile")
-  primTodo("cond")
+  prim("cond") { st =>
+    st.stack match {
+      case VList(values) :: rest =>
+        val toExec = values.init.toStream.flatMap {
+          case VList(VList(cond) :: vs) =>
+            Interpreter.runState(st.copy(stack = rest, termStack = (cond, st.termStack.head._2) :: Nil)).stack match {
+              case VBool(true) :: _ => Some(vs)
+              case _ => None
+            }
+        }.headOption.getOrElse(values.last.asInstanceOf[VList].ls)
+
+        st.copy(stack = rest, termStack = (toExec, st.termStack.head._2) :: st.termStack)
+    }
+  }
   primTodo("while")
   primTodo("linrec")
   primTodo("tailrec")
@@ -229,9 +343,38 @@ object Primitives extends LibBuilder {
   primTodo("condlinrec")
   primTodo("step")
   primTodo("fold")
-  primTodo("map")
-  primTodo("times")
-  primTodo("infra")
+  prim("map") { st =>
+    st.stack match {
+      case VList(f) :: VList(xs) :: rest =>
+        val results = xs.map { x =>
+          Interpreter.runState(st.copy(stack = x :: Nil, termStack = (f, st.termStack.head._2) :: Nil)).stack match {
+            case res :: Nil => res
+          }
+        }
+        st.copy(stack = VList(results) :: rest)
+
+      case VList(f) :: VStr(str) :: rest =>
+        val results = str.map { ch =>
+          Interpreter.runState(st.copy(stack = VChar(ch) :: Nil, termStack = (f, st.termStack.head._2) :: Nil)).stack match {
+            case VChar(res) :: Nil => res
+          }
+        }
+        st.copy(stack = VStr(results) :: rest)
+    }
+  }
+  prim("times") { st =>
+    st.stack match {
+      case VList(f) :: VInt(n) :: rest =>
+        st.copy(stack = rest, termStack = List.fill(n.toInt)((f, st.termStack.head._2)) ++ st.termStack)
+    }
+  }
+  prim("infra") { st =>
+    st.stack match {
+      case VList(p) :: VList(tmpStack) :: rest =>
+        val resStack = Interpreter.runState(st.copy(stack = tmpStack, termStack = (p, st.termStack.head._2) :: Nil)).stack
+        st.copy(stack = VList(resStack) :: rest)
+    }
+  }
   primTodo("primrec")
   primTodo("filter")
   primTodo("split")
@@ -240,22 +383,38 @@ object Primitives extends LibBuilder {
   primTodo("treestep")
   primTodo("treerec")
   primTodo("treegenrec")
+
   primTodo("help")
   primTodo("helpdetail")
   primTodo("manual")
-  primTodo("setautoput")
-  primTodo("setundeferror")
-  primTodo("setecho")
+
+  primNoop("setautoput")
+  primNoop("setundeferror")
+  primNoop("setecho")
+
   primTodo("gc")
   primTodo("system")
   primTodo("getenv")
   primTodo("argv")
   primTodo("argc")
+
   primTodo("get")
-  primTodo("put")
-  primTodo("putch")
-  primEffS("putchars") { case StrVal(str) :: _ => print(str) }
-  primTodo("include")
+  primS("put") { case x :: rest => /*print(x);*/ rest }
+  primS("putch") {
+    case VChar(n) :: rest => /*print(Char(n))*/ rest
+    case VInt(n) :: rest => /*print(Char(n))*/ rest
+  }
+  primS("putchars") { case VStr(str) :: rest => /*print(str);*/ rest }
+  prim("include") { st =>
+    st.stack match {
+      case VStr(filename) :: rest =>
+        val file = Interpreter.run(Parser.parseResource(s"lib/$filename"))
+        st.copy(stack = rest, globals = st.globals ++ file.globals)
+    }
+  }
+
   primTodo("abort")
   primTodo("quit")
+
+  primNoop("__settracegc")
 }
