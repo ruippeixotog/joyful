@@ -14,10 +14,10 @@ object Ast {
   case class Term(factors: List[Factor])
 
   sealed trait Factor
-  case class Ident(name: String) extends Factor
-  case class Number(x: Double) extends Factor
-  case class Character(ch: Char) extends Factor
-  case class Text(str: String) extends Factor
-  case class Seq(seq: List[Factor]) extends Factor
-  case class Quoted(term: Term) extends Factor
+  case class FIdent(name: String) extends Factor
+  case class FNumber(x: Double) extends Factor
+  case class FChar(ch: Char) extends Factor
+  case class FStr(str: String) extends Factor
+  case class FSet(seq: Set[Int]) extends Factor
+  case class FQuoted(term: Term) extends Factor
 }

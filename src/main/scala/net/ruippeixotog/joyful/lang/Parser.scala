@@ -46,15 +46,15 @@ object Parser extends StandardTokenParsers {
     rep(factor) ^^ Term
 
   def factor: Parser[Factor] = {
-    def numericOrCharFactor: Parser[Factor] =
-      numericLit ^^ { d => Number(d.toDouble) } |
-        charLit ^^ Character
+    def numericOrCharLit: Parser[Int] =
+      numericLit ^^ (_.toInt) | charLit ^^ (_.toInt)
 
-    ident ^^ Ident |
-      numericOrCharFactor |
-      stringLit ^^ Text |
-      "{" ~> rep(numericOrCharFactor) <~ "}" ^^ Seq |
-      "[" ~> term <~ "]" ^^ Quoted
+    ident ^^ FIdent |
+      numericLit ^^ { x => FNumber(x.toDouble) } |
+      charLit ^^ FChar |
+      stringLit ^^ FStr |
+      "{" ~> rep(numericOrCharLit) <~ "}" ^^ { seq => FSet(seq.toSet) } |
+      "[" ~> term <~ "]" ^^ FQuoted
   }
 
   def charLit: Parser[Char] =

@@ -11,7 +11,7 @@ object Lexical extends StdLexical {
   }
 
   override def token: Parser[Token] =
-    identifier | numericLit | charLit | stringLit | EofCh ^^^ EOF |
+    numericLit | charLit | stringLit | identifier | EofCh ^^^ EOF |
     '\'' ~> failure("unclosed string literal") |
     '\"' ~> failure("unclosed string literal") |
     delim |

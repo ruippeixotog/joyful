@@ -1,7 +1,7 @@
 package net.ruippeixotog.joyful.lib
 
-import net.ruippeixotog.joyful.Interpreter.State
-import net.ruippeixotog.joyful.Value
+import net.ruippeixotog.joyful.interpreter.Interpreter.State
+import net.ruippeixotog.joyful.interpreter.Value
 
 class LibBuilder {
   private[this] var _registry: Map[String, State => State] = Map()
@@ -20,5 +20,8 @@ class LibBuilder {
     primS(name) { case rest => v :: rest }
 
   protected[this] def primTodo(name: String): Unit =
-    primS(name) { case _ => throw new Exception(s"not implemented: $name") }
+    primS(name) { case _ => throw new UnsupportedOperationException(s"not implemented: $name") }
+
+  protected[this] def primNoop(name: String): Unit =
+    prim(name)(identity)
 }
