@@ -52,7 +52,7 @@ object Interpreter {
       case CompoundDef(_, pvt, pub) =>
         val pvtDef = pvt.flatMap(apply).toMap
         val pubDef = pub.flatMap(apply).toMap
-        pubDef.mapValues { ctx => ctx.copy(locals = pvtDef ++ ctx.locals) }
+        pubDef.view.mapValues { ctx => ctx.copy(locals = pvtDef ++ ctx.locals) }.toMap
     }
   }
 
